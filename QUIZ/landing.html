@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JAMB Quiz Master | By Sung</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap">
+    <link rel="stylesheet" href="landing.css">
+    <link rel="stylesheet" href="animations.css">
+</head>
+<body>
+    <!-- Add this near the top of your body -->
+<div class="calculator-container">
+    <button id="calculatorToggle" class="calculator-btn" title="JAMB Calculator">
+      <span class="calc-icon">🧮</span>
+    </button>
+    <div class="calculator-modal">
+      <div class="calculator-display">
+        <input type="text" id="calc-display" readonly>
+      </div>
+      <div class="calculator-keys">
+        <button class="calc-key" data-value="7">7</button>
+        <button class="calc-key" data-value="8">8</button>
+        <button class="calc-key" data-value="9">9</button>
+        <button class="calc-key calc-operator" data-value="+">+</button>
+        
+        <button class="calc-key" data-value="4">4</button>
+        <button class="calc-key" data-value="5">5</button>
+        <button class="calc-key" data-value="6">6</button>
+        <button class="calc-key calc-operator" data-value="-">-</button>
+        
+        <button class="calc-key" data-value="1">1</button>
+        <button class="calc-key" data-value="2">2</button>
+        <button class="calc-key" data-value="3">3</button>
+        <button class="calc-key calc-operator" data-value="*">×</button>
+        
+        <button class="calc-key" data-value="0">0</button>
+        <button class="calc-key" data-value=".">.</button>
+        <button class="calc-key calc-clear" data-value="clear">C</button>
+        <button class="calc-key calc-operator" data-value="/">÷</button>
+        
+        <button class="calc-key calc-equals" data-value="=">=</button>
+      </div>
+    </div>
+  </div>
+  <style>
+    /* Calculator Styles */
+.calculator-container {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1000;
+}
+
+.calculator-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2c3e50, #3498db);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calculator-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.calculator-modal {
+  position: absolute;
+  top: 60px;
+  left: 0;
+  width: 250px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+  padding: 15px;
+  display: none;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.calculator-display input {
+  width: 100%;
+  padding: 10px;
+  font-size: 1.5rem;
+  text-align: right;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  margin-bottom: 10px;
+}
+
+.calculator-keys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.calc-key {
+  padding: 15px;
+  font-size: 1.2rem;
+  border: none;
+  border-radius: 5px;
+  background: #f5f5f5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.calc-key:hover {
+  background: #e0e0e0;
+}
+
+.calc-operator {
+  background: #3498db;
+  color: white;
+}
+
+.calc-operator:hover {
+  background: #2980b9;
+}
+
+.calc-clear {
+  background: #e74c3c;
+  color: white;
+}
+
+.calc-clear:hover {
+  background: #c0392b;
+}
+
+.calc-equals {
+  background: #2ecc71;
+  color: white;
+  grid-column: span 4;
+}
+
+.calc-equals:hover {
+  background: #27ae60;
+}
+  </style>
+<script>
+   // Calculator Functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const calculatorToggle = document.getElementById('calculatorToggle');
+  const calculatorModal = document.querySelector('.calculator-modal');
+  const display = document.getElementById('calc-display');
+  const keys = document.querySelectorAll('.calc-key');
+  
+  let currentInput = '';
+  let previousInput = '';
+  let operation = null;
+  let resetScreen = false;
+
+  // Toggle calculator visibility
+  calculatorToggle.addEventListener('click', () => {
+    calculatorModal.style.display = calculatorModal.style.display === 'block' ? 'none' : 'block';
+  });
+
+  // Close calculator when clicking outside
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.calculator-container') && calculatorModal.style.display === 'block') {
+      calculatorModal.style.display = 'none';
+    }
+  });
+
+  // Calculator logic
+  keys.forEach(key => {
+    key.addEventListener('click', () => {
+      const value = key.getAttribute('data-value');
+      
+      if (value >= '0' && value <= '9') {
+        appendNumber(value);
+      } else if (value === '.') {
+        appendDecimal();
+      } else if (['+', '-', '*', '/'].includes(value)) {
+        setOperation(value);
+      } else if (value === '=') {
+        compute();
+      } else if (value === 'clear') {
+        clear();
+      }
+      
+      updateDisplay();
+    });
+  });
+
+  function appendNumber(number) {
+    if (currentInput === '0' || resetScreen) {
+      currentInput = number;
+      resetScreen = false;
+    } else {
+      currentInput += number;
+    }
+  }
+
+  function appendDecimal() {
+    if (resetScreen) {
+      currentInput = '0.';
+      resetScreen = false;
+      return;
+    }
+    if (!currentInput.includes('.')) {
+      currentInput += '.';
+    }
+  }
+
+  function setOperation(operator) {
+    if (operation !== null) compute();
+    previousInput = currentInput;
+    operation = operator;
+    resetScreen = true;
+  }
+
+  function compute() {
+    let computation;
+    const prev = parseFloat(previousInput);
+    const current = parseFloat(currentInput);
+    
+    if (isNaN(prev) || isNaN(current)) return;
+    
+    switch (operation) {
+      case '+':
+        computation = prev + current;
+        break;
+      case '-':
+        computation = prev - current;
+        break;
+      case '*':
+        computation = prev * current;
+        break;
+      case '/':
+        computation = prev / current;
+        break;
+      default:
+        return;
+    }
+    
+    currentInput = computation.toString();
+    operation = null;
+    resetScreen = true;
+  }
+
+  function clear() {
+    currentInput = '0';
+    previousInput = '';
+    operation = null;
+  }
+
+  function updateDisplay() {
+    display.value = currentInput;
+  }
+}); 
+</script>
+    <div class="theme-toggle">
+        <input type="checkbox" id="theme-toggle" aria-label="Toggle dark mode">
+        <label for="theme-toggle" class="toggle-label">
+          <span class="sun-icon">☀️</span>
+          <span class="moon-icon">🌙</span>
+          <span class="toggle-ball"></span>
+        </label>
+      </div>
+    <style>
+ 
+/* System preference detection */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --current-bg: var(--bg-dark);
+    --current-text: var(--text-dark);
+    --current-toggle-bg: var(--toggle-bg-dark);
+    --current-toggle-ball: var(--toggle-ball-dark);
+  }
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --current-bg: var(--bg-light);
+    --current-text: var(--text-light);
+    --current-toggle-bg: var(--toggle-bg-light);
+    --current-toggle-ball: var(--toggle-ball-light);
+  }
+}
+
+.theme-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+}
+
+.toggle-label {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 80px;
+  height: 36px;
+  padding: 5px;
+  background: var(--current-toggle-bg);
+  border-radius: 50px;
+  cursor: pointer;
+  transition: background var(--transition-speed) ease;
+  box-shadow: 0 2px 5px rgba(80, 78, 78, 0.2);
+}
+
+.sun-icon, .moon-icon {
+  font-size: 18px;
+  transition: opacity var(--transition-speed) ease;
+}
+
+.sun-icon {
+  opacity: 1;
+}
+
+.moon-icon {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.toggle-ball {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 30px;
+  height: 30px;
+  background: var(--current-toggle-ball);
+  border-radius: 50%;
+  transition: transform var(--transition-speed) ease, background var(--transition-speed) ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+#theme-toggle {
+  display: none;
+}
+
+/* Dark mode styles */
+#theme-toggle:checked + .toggle-label {
+  background: var(--toggle-bg-dark);
+}
+
+#theme-toggle:checked + .toggle-label .sun-icon {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+#theme-toggle:checked + .toggle-label .moon-icon {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+#theme-toggle:checked + .toggle-label .toggle-ball {
+  transform: translateX(44px);
+  background: var(--toggle-ball-dark);
+}
+
+/* Apply theme to entire app */
+body {
+  background: var(--current-bg);
+  color: var(--current-text);
+  transition: background var(--transition-speed) ease, color var(--transition-speed) ease;
+}
+    </style>
+<script>
+   document.addEventListener('DOMContentLoaded', () => {
+  const toggle = document.getElementById('theme-toggle');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+  
+  // Set initial state
+  if (localStorage.getItem('theme') === 'dark') {
+    toggle.checked = true;
+    document.body.classList.add('dark-mode');
+  } else if (localStorage.getItem('theme') === 'light') {
+    toggle.checked = false;
+    document.body.classList.remove('dark-mode');
+  } else if (prefersDark.matches) {
+    toggle.checked = true;
+    document.body.classList.add('dark-mode');
+  }
+  
+  // Toggle theme
+  toggle.addEventListener('change', () => {
+    if (toggle.checked) {
+      document.body.classList.add('dark-mode');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.body.classList.remove('dark-mode');
+      localStorage.setItem('theme', 'light');
+    }
+  });
+  
+  // Watch for system changes
+  prefersDark.addEventListener('change', e => {
+    if (localStorage.getItem('theme') === null) {
+      if (e.matches) {
+        toggle.checked = true;
+        document.body.classList.add('dark-mode');
+      } else {
+        toggle.checked = false;
+        document.body.classList.remove('dark-mode');
+      }
+    }
+  });
+}); 
+</script>
+    <div class="app-container">
+        <!-- Welcome Screen -->
+        <div class="welcome-screen" id="welcomeScreen">
+            <div class="welcome-content">
+                <img src="ayo.jpg" alt="ayo sung Logo" class="logo pulse">
+                <h1>Quiz Master</h1>
+                <p class="subtitle">Test your knowledge with past questions</p>
+                <button class="btn-start" id="btnStart">Begin Challenge</button>
+               <a href="https://x.com/sung_tech">
+<button class="cta-button" id="startQuizBtn">
+    <span class="cta-text">Created By Sung_Tech</span>
+    <span class="cta-icon">→</span>
+  </button>
+  </a>
+  <style>
+    /* CTA Button Styles */
+.cta-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  padding: 15px 30px;
+  background: linear-gradient(135deg, #3498db, #2c3e50);
+  color: white;
+  border: none;
+  border-radius: 50px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+}
+
+/* Hover & Focus Effects */
+.cta-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(52, 152, 219, 0.4);
+  background: linear-gradient(135deg, #2c3e50, #3498db);
+}
+
+.cta-button:active {
+  transform: translateY(1px);
+}
+
+/* Icon Animation */
+.cta-icon {
+  display: inline-block;
+  transition: transform 0.3s ease;
+}
+
+.cta-button:hover .cta-icon {
+  transform: translateX(5px);
+}
+
+/* Ripple Effect (Advanced) */
+.cta-button::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.5);
+  opacity: 0;
+  border-radius: 100%;
+  transform: scale(1, 1) translate(-50%, -50%);
+  transform-origin: 50% 50%;
+}
+
+.cta-button:focus:not(:active)::after {
+  animation: ripple 0.6s ease-out;
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0, 0);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(20, 20);
+    opacity: 0;
+  }
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .cta-button {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+}
+  </style>
+    
+            </div>
+        </div>
+
+        <!-- Subject Selection -->
+        <div class="subject-selection hidden" id="subjectSelection">
+            <h2>Choose Your Subject</h2>
+            <div class="subject-grid">
+                <div class="subject-card" data-subject="english">
+                    <div class="subject-icon">E</div>
+                    <h3>English</h3>
+                </div>
+                <div class="subject-card" data-subject="mathematics">
+                    <div class="subject-icon">M</div>
+                    <h3>Mathematics</h3>
+                </div>
+                <div class="subject-card" data-subject="physics">
+                    <div class="subject-icon">P</div>
+                    <h3>Physics</h3>
+                </div>
+                <div class="subject-card" data-subject="chemistry">
+                    <div class="subject-icon">C</div>
+                    <h3>Chemistry</h3>
+                </div>
+            </div>
+            <button class="btn-back" id="btnBackToWelcome">Back</button>
+        </div>
+
+        <!-- Quiz Container -->
+        <div class="quiz-container hidden" id="quizContainer">
+            <div class="quiz-header">
+                <div class="quiz-info">
+                    <span class="subject-name" id="currentSubject">Subject</span>
+                    <span class="question-count" id="questionCount">Question 1/20</span>
+                </div>
+                <div class="timer-container">
+                    <div class="timer-circle">
+                        <svg class="timer-svg" viewBox="0 0 100 100">
+                            <circle class="timer-circle-bg" cx="50" cy="50" r="45"></circle>
+                            <circle class="timer-circle-fill" cx="50" cy="50" r="45"></circle>
+                        </svg>
+                        <span class="timer-text" id="timer">30</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="question-container">
+                <div class="question-text" id="questionText"></div>
+                <div class="options-container" id="optionsContainer"></div>
+            </div>
+
+            <div class="quiz-footer">
+                <button class="btn-skip" id="btnSkip">Skip Question</button>
+                <div class="progress-container">
+                    <div class="progress-bar" id="progressBar"></div>
+                </div>
+            </div>
+        </div>
+<!-- Add this near the bottom of your body (before closing </body>) -->
+<div class="music-player">
+    <audio id="background-music" loop>
+      <source src="emotional-depth_intro-323006.mp3" type="audio/mpeg">
+      Your browser does not support audio element.
+    </audio>
+    <button id="musicToggle" class="music-btn" aria-label="Toggle music">
+      <span class="music-icon">🎵</span>
+      <span class="music-tooltip">Play Music</span>
+    </button>
+    <div class="volume-control">
+      <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.5">
+    </div>
+  </div>
+  <style>
+   /* Music Player Styles */
+.music-player {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.music-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3498db, #2c3e50);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.music-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+}
+
+.music-btn:hover .music-tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+.music-tooltip {
+  position: absolute;
+  bottom: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2c3e50;
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 0.8rem;
+  visibility: hidden;
+  opacity: 0;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.volume-control {
+  width: 0;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  opacity: 0;
+}
+
+.music-player:hover .volume-control {
+  width: 100px;
+  opacity: 1;
+}
+
+.volume-control input {
+  width: 100%;
+  cursor: pointer;
+}
+
+/* Music icon animation */
+@keyframes musicPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+.playing .music-icon {
+  animation: musicPulse 1s infinite;
+} 
+  </style>
+  <script>
+    // Music Player Functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const musicToggle = document.getElementById('musicToggle');
+  const backgroundMusic = document.getElementById('background-music');
+  const volumeSlider = document.getElementById('volumeSlider');
+  
+  // Check if user previously had music enabled
+  const savedVolume = localStorage.getItem('musicVolume');
+  const savedPlayState = localStorage.getItem('musicPlaying');
+  
+  if (savedVolume) {
+    backgroundMusic.volume = savedVolume;
+    volumeSlider.value = savedVolume;
+  }
+  
+  if (savedPlayState === 'true') {
+    backgroundMusic.play()
+      .then(() => {
+        musicToggle.classList.add('playing');
+        musicToggle.querySelector('.music-tooltip').textContent = 'Pause Music';
+      })
+      .catch(error => {
+        console.log("Auto-play was prevented: ", error);
+      });
+  }
+  
+  // Toggle play/pause
+  musicToggle.addEventListener('click', () => {
+    if (backgroundMusic.paused) {
+      backgroundMusic.play()
+        .then(() => {
+          musicToggle.classList.add('playing');
+          musicToggle.querySelector('.music-tooltip').textContent = 'Pause Music';
+          localStorage.setItem('musicPlaying', 'true');
+        })
+        .catch(error => {
+          console.log("Playback failed: ", error);
+        });
+    } else {
+      backgroundMusic.pause();
+      musicToggle.classList.remove('playing');
+      musicToggle.querySelector('.music-tooltip').textContent = 'Play Music';
+      localStorage.setItem('musicPlaying', 'false');
+    }
+  });
+  
+  // Volume control
+  volumeSlider.addEventListener('input', () => {
+    backgroundMusic.volume = volumeSlider.value;
+    localStorage.setItem('musicVolume', volumeSlider.value);
+  });
+  
+  // Handle tab visibility changes
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      backgroundMusic.pause();
+    } else if (localStorage.getItem('musicPlaying') === 'true') {
+      backgroundMusic.play().catch(e => console.log("Playback failed:", e));
+    }
+  });
+});
+  </script>
+        <!-- Results Screen -->
+        <div class="results-screen hidden" id="resultsScreen">
+            <div class="results-content">
+                <h2>Quiz Completed!</h2>
+                <div class="score-display">
+                    <div class="score-circle">
+                        <span id="finalScore">0</span>%
+                    </div>
+                </div>
+                <div class="stats-container">
+                    <div class="stat-box correct">
+                        <span class="stat-count" id="correctCount">0</span>
+                        <span class="stat-label">Correct</span>
+                    </div>
+                    <div class="stat-box wrong">
+                        <span class="stat-count" id="wrongCount">0</span>
+                        <span class="stat-label">Wrong</span>
+                    </div>
+                    <div class="stat-box skipped">
+                        <span class="stat-count" id="skippedCount">0</span>
+                        <span class="stat-label">Skipped</span>
+                    </div>
+                </div>
+                <div class="fun-message">
+                    <p>Wagwan homies😆</p>
+                  </div>
+                <style>
+                .fun-message {
+                    animation: bounce 0.5s;
+                    color: #2e53cc;
+                    font-weight: bold;
+                    text-align: center;
+                    margin-top: 20px;
+                  }
+                  
+                  @keyframes bounce {
+                    0%, 100% { transform: translateY(0); }
+                    50% { transform: translateY(-10px); }
+                  }
+                  </style>
+                <div class="actions">
+                    <button class="btn-review" id="btnReview">
+                      <span class="btn-icon">🔍</span> Review Answers</button>
+                    <button class="btn-restart" id="btnRestart"><span class="btn-icon">🔍</span>Try Another Subject</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="quiz-engine.js"></script>
+    <script src="ui-controller.js"></script>
+    <script src="landing.js"></script>
+
+ 
+</body>
+</html>
